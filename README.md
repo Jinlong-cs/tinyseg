@@ -63,6 +63,22 @@ tinyseg/
     └── verify.py
 ```
 
+## Dataset Labels
+
+TinySeg currently uses the following 9 segmentation labels:
+
+| Label | Meaning |
+| --- | --- |
+| `free_traversable` | Normal traversable area |
+| `cautious_traversable` | Traversable but should slow down |
+| `stairs_escalator` | Stairs or escalator, not traversable |
+| `dropoff_edge` | High-risk edge such as curb or step boundary |
+| `roadway_nonped` | Roadway or mixed traffic area that should not be entered by default |
+| `fixed_barrier` | Fixed obstacle such as wall, cabinet, pole, or railing |
+| `glass_barrier` | Transparent obstacle such as glass door or glass wall |
+| `person` | Person or crowd that should be avoided with high priority |
+| `movable_obstacle` | Movable obstacle such as cart, wheelchair, box, or bike |
+
 ## Training
 
 ```bash
@@ -120,3 +136,17 @@ uv run python verify_board.py \
 ```
 
 The verification script uploads the compiled model and one prepared input tensor, runs `hrt_model_exec infer`, and downloads the dump files for inspection.
+
+## X5 Inference Speed
+
+Latest board-side timing snapshot on Horizon X5:
+
+- dataset: `Office_test manualclean_v2`
+- images: `652`
+- input size: `352 x 640`
+- date: `2026-03-26`
+
+| Route | Preprocess Mean | Infer Mean | Postprocess Mean | Total Mean | Total P95 | Foreground mIoU | Pixel Accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `yolov26_9cls` | 1.060 ms | 7.637 ms | 6.211 ms | 14.909 ms | 18.069 ms | 0.7455 | 0.9443 |
+| `yolov26_9cls_dfl_adapter` | 1.058 ms | 21.386 ms | 7.240 ms | 29.686 ms | 38.407 ms | 0.7347 | 0.9462 |
