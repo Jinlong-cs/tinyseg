@@ -32,7 +32,11 @@ RUN set -eux; \
   if [ -n "${EXIST_G}" ]; then \
     usermod -aG "${EXIST_G}" "${USER_NAME}"; \
   else \
-    groupadd -g "${TARGET_GID}" video; \
+    if getent group video >/dev/null; then \
+      groupmod -g "${TARGET_GID}" video; \
+    else \
+      groupadd -g "${TARGET_GID}" video; \
+    fi; \
     usermod -aG video "${USER_NAME}"; \
   fi
 
