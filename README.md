@@ -48,6 +48,9 @@ tinyseg/
 ├── export_onnx.py
 ├── quantize_x5.py
 ├── verify_board.py
+├── data/
+├── runs/
+├── outputs/
 ├── dev/
 │   ├── Dockerfile
 │   ├── build.sh
@@ -62,6 +65,13 @@ tinyseg/
     ├── ultralytics_rdk.py
     └── verify.py
 ```
+
+Repository storage convention:
+- `data/`: converted YOLO-format datasets
+- `runs/`: Ultralytics training outputs
+- `outputs/`: ONNX, compiled models, board verification outputs
+
+Only the folder skeleton is kept in git. Generated datasets, checkpoints, and experiment artifacts should stay untracked.
 
 ## Dataset Labels
 
@@ -100,7 +110,7 @@ Ultralytics outputs follow the standard layout under `runs/seg/<name>/`.
 uv run python export_onnx.py \
     --pt runs/seg/office_manualclean/weights/best.pt \
     --imgsz 352 640 \
-    --output artifacts/office_manualclean/best_352x640.onnx
+    --output outputs/office_manualclean/best_352x640.onnx
 ```
 
 The export step patches the Ultralytics model into an RDK-friendly output form before ONNX conversion.
@@ -110,10 +120,10 @@ The export step patches the Ultralytics model into an RDK-friendly output form b
 ```bash
 uv run python quantize_x5.py \
     --workspace . \
-    --onnx artifacts/office_manualclean/best_352x640.onnx \
+    --onnx outputs/office_manualclean/best_352x640.onnx \
     --data-yaml data/office_manualclean/data.yaml \
     --cal-split train \
-    --output-dir artifacts/office_manualclean/rdk_x5 \
+    --output-dir outputs/office_manualclean/rdk_x5 \
     --preprocess letterbox
 ```
 
@@ -130,9 +140,9 @@ uv run python verify_board.py \
     --host 192.168.31.63 \
     --user sunrise \
     --password sunrise \
-    --model-file artifacts/office_manualclean/rdk_x5/best_352x640_bayese_640x352_nv12.bin \
+    --model-file outputs/office_manualclean/rdk_x5/best_352x640_bayese_640x352_nv12.bin \
     --input-bin sample.rgbchw \
-    --output-dir artifacts/office_manualclean/board_verify
+    --output-dir outputs/office_manualclean/board_verify
 ```
 
 The verification script uploads the compiled model and one prepared input tensor, runs `hrt_model_exec infer`, and downloads the dump files for inspection.

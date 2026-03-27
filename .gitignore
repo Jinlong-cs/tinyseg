@@ -10,7 +10,18 @@ dist/
 .pytest_cache/
 .vscode/
 
-runs/
+data/*
+!data/.gitkeep
+!data/**/.gitkeep
+
+runs/*
+!runs/.gitkeep
+!runs/**/.gitkeep
+
+outputs/*
+!outputs/.gitkeep
+!outputs/**/.gitkeep
+
 artifacts/
 output/
 wandb/
