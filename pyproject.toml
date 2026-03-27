@@ -16,6 +16,7 @@ dependencies = [
   "PyYAML",
   "torch",
   "ultralytics",
+  "wandb",
 ]
 
 [project.scripts]
