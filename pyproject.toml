@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tinyseg"
+version = "0.1.0"
+description = "Small YOLO segmentation training, export, and Horizon RDK X5 PTQ workflow."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "onnx",
+  "opencv-python-headless",
+  "paramiko",
+  "PyYAML",
+  "torch",
+  "ultralytics",
+]
+
+[project.scripts]
+tinyseg-train = "tinyseg.train:main"
+tinyseg-export-onnx = "tinyseg.export:main"
+tinyseg-quantize-x5 = "tinyseg.quantize:main"
+tinyseg-verify-board = "tinyseg.verify:main"
+
+[tool.setuptools]
+packages = ["tinyseg"]
