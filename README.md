@@ -162,7 +162,7 @@ Use this section as an append-only experiment log:
 | Date | Experiment | Scenes | Dataset | Validation Summary | Board Summary | Artifacts |
 | --- | --- | --- | --- | --- | --- | --- |
 | `2026-03-26` | `office_test_manualclean_v2` | `Office_test` | `652 images` | `9-class deployment comparison` | `yolov26_9cls: 14.909 ms, fg mIoU 0.7455`; `yolov26_9cls_dfl_adapter: 29.686 ms, fg mIoU 0.7347` | `Not kept in repo` |
-| `2026-03-27` | `open9_corridor_elevator_office_v1` | `corridor + elevator + Office_test` | `824 images (700 train / 124 val)` | `best mask mAP50 0.863, best mask mAP50-95 0.621` | `fg mIoU 0.7465, pixel acc 0.9334, latency unavailable in report` | [video](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4), [pt](experiments/2026-03-27_open9_corridor_elevator_office_v1/best.pt), [onnx](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640.onnx), [bin](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640_bayese_640x352_nv12.bin), [wandb](https://wandb.ai/eddie18361268318-discover/tinyseg/runs/z3fth4j9) |
+| `2026-03-27` | `open9_corridor_elevator_office_v1` | `corridor + elevator + Office_test` | `824 images (700 train / 124 val)` | `best mask mAP50 0.863, best mask mAP50-95 0.621` | `fg mIoU 0.7465, pixel acc 0.9334, latency unavailable in report` | [gif](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.gif), [pt](experiments/2026-03-27_open9_corridor_elevator_office_v1/best.pt), [onnx](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640.onnx), [bin](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640_bayese_640x352_nv12.bin), [wandb](https://wandb.ai/eddie18361268318-discover/tinyseg/runs/z3fth4j9) |
 
 ### 2026-03-27: Open9 Corridor + Elevator + Office
 
@@ -198,11 +198,7 @@ Artifacts kept in repo:
 - [open9_corridor_elevator_office_v1_best_352x640.onnx](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640.onnx)
 - [open9_corridor_elevator_office_v1_best_352x640_bayese_640x352_nv12.bin](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640_bayese_640x352_nv12.bin)
 - [mixed_val_previews.gif](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.gif)
-- [mixed_val_previews.mp4](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4)
 
 Board preview video:
 
 ![2026-03-27 board preview](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.gif)
-
-Fallback link:
-- [mixed_val_previews.mp4](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4)
