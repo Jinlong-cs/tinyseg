@@ -16,9 +16,11 @@ dependencies = [
   "PyYAML",
   "torch",
   "ultralytics",
+  "wandb",
 ]
 
 [project.scripts]
+tinyseg-merge-yolo = "tinyseg.merge:main"
 tinyseg-train = "tinyseg.train:main"
 tinyseg-export-onnx = "tinyseg.export:main"
 tinyseg-quantize-x5 = "tinyseg.quantize:main"
