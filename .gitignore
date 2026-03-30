@@ -32,3 +32,11 @@ wandb/
 *.bin
 *.hbm
 *.rgbchw
+
+!experiments/
+!experiments/**/
+!experiments/**/*.pt
+!experiments/**/*.onnx
+!experiments/**/*.bin
+!experiments/**/*.hbm
+!experiments/**/*.mp4
