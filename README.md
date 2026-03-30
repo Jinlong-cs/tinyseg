@@ -200,8 +200,7 @@ Artifacts kept in repo:
 - [mixed_val_previews.mp4](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4)
 
 Board preview video:
-
-<video src="./experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4" controls muted playsinline width="100%"></video>
+experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4
 
 Fallback link:
 - [mixed_val_previews.mp4](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4)
