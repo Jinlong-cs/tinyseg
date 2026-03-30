@@ -39,4 +39,5 @@ wandb/
 !experiments/**/*.onnx
 !experiments/**/*.bin
 !experiments/**/*.hbm
+!experiments/**/*.gif
 !experiments/**/*.mp4

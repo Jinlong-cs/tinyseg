@@ -197,10 +197,12 @@ Artifacts kept in repo:
 - [best.pt](experiments/2026-03-27_open9_corridor_elevator_office_v1/best.pt)
 - [open9_corridor_elevator_office_v1_best_352x640.onnx](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640.onnx)
 - [open9_corridor_elevator_office_v1_best_352x640_bayese_640x352_nv12.bin](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640_bayese_640x352_nv12.bin)
+- [mixed_val_previews.gif](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.gif)
 - [mixed_val_previews.mp4](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4)
 
 Board preview video:
-experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4
+
+![2026-03-27 board preview](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.gif)
 
 Fallback link:
 - [mixed_val_previews.mp4](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.mp4)
