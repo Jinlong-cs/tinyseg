@@ -3,6 +3,7 @@
 TinySeg is a small training-side repository for YOLO segmentation on Horizon RDK X5.
 
 It keeps the model workflow in one place:
+- convert Labelme annotations to a 2-class YOLO-seg dataset
 - train a segmentation model
 - export a board-friendly ONNX
 - run PTQ quantization and compile a `.bin`
@@ -32,6 +33,7 @@ cd tinyseg
 uv venv
 uv sync
 
+uv run python convert_labelme_drivable_stairs.py --help
 uv run python merge_yolo_datasets.py --help
 uv run python train_yolov26.py --help
 uv run python export_onnx.py --help
@@ -45,6 +47,7 @@ uv run python verify_board.py --help
 tinyseg/
 ├── README.md
 ├── pyproject.toml
+├── convert_labelme_drivable_stairs.py
 ├── merge_yolo_datasets.py
 ├── train_yolov26.py
 ├── export_onnx.py
@@ -61,6 +64,7 @@ tinyseg/
 └── tinyseg/
     ├── __init__.py
     ├── calibration.py
+    ├── labelme_drivable_stairs.py
     ├── export.py
     ├── merge.py
     ├── quantize.py
@@ -80,31 +84,39 @@ Only curated experiment artifacts should be committed. Temporary datasets, check
 
 ## Dataset Labels
 
-TinySeg currently uses the following 9 segmentation labels:
+TinySeg is configured for two foreground segmentation labels:
 
 | Label | Meaning |
 | --- | --- |
-| `free_traversable` | Normal traversable area |
-| `cautious_traversable` | Traversable but should slow down |
-| `stairs_escalator` | Stairs or escalator, not traversable |
-| `dropoff_edge` | High-risk edge such as curb or step boundary |
-| `roadway_nonped` | Roadway or mixed traffic area that should not be entered by default |
-| `fixed_barrier` | Fixed obstacle such as wall, cabinet, pole, or railing |
-| `glass_barrier` | Transparent obstacle such as glass door or glass wall |
-| `person` | Person or crowd that should be avoided with high priority |
-| `movable_obstacle` | Movable obstacle such as cart, wheelchair, box, or bike |
+| `drivable` | Traversable floor or ground region |
+| `stairs` | Stairs or stair-like area |
+
+The Labelme converter keeps only labels that map to these two classes. Labels such as `dangerous_area`, `sky`, `car`, `person`, or `dropoff` are ignored and become background.
+
+## Convert Labelme Dataset
+
+```bash
+uv run python convert_labelme_drivable_stairs.py \
+    --inputs /home/supernova/wujinlong/dataset_discover \
+    --output data/drivable_stairs_discover_v1 \
+    --val-ratio 0.15 \
+    --split-mode temporal \
+    --overwrite
+```
+
+The converter recursively scans Labelme JSON files, writes YOLO-seg `images/{train,val}` and `labels/{train,val}`, and creates `data.yaml` plus `summary.json`. The split logic keeps singleton classes, such as a rare stairs sample, in the training split instead of leaving a class absent from training.
 
 ## Training
 
 ```bash
 uv run python train_yolov26.py \
-    --data data/office_manualclean/data.yaml \
+    --data data/drivable_stairs_discover_v1/data.yaml \
     --model yolo26n-seg.pt \
     --epochs 150 \
     --imgsz 640 \
     --batch 8 \
     --device 0 \
-    --name office_manualclean
+    --name drivable_stairs_discover_v1
 ```
 
 Ultralytics outputs follow the standard layout under `runs/seg/<name>/`.
@@ -113,9 +125,9 @@ Ultralytics outputs follow the standard layout under `runs/seg/<name>/`.
 
 ```bash
 uv run python export_onnx.py \
-    --pt runs/seg/office_manualclean/weights/best.pt \
+    --pt runs/seg/drivable_stairs_discover_v1/weights/best.pt \
     --imgsz 352 640 \
-    --output outputs/office_manualclean/best_352x640.onnx
+    --output outputs/drivable_stairs_discover_v1/best_352x640.onnx
 ```
 
 The export step patches the Ultralytics model into an RDK-friendly output form before ONNX conversion.
@@ -125,10 +137,10 @@ The export step patches the Ultralytics model into an RDK-friendly output form b
 ```bash
 uv run python quantize_x5.py \
     --workspace . \
-    --onnx outputs/office_manualclean/best_352x640.onnx \
-    --data-yaml data/office_manualclean/data.yaml \
+    --onnx outputs/drivable_stairs_discover_v1/best_352x640.onnx \
+    --data-yaml data/drivable_stairs_discover_v1/data.yaml \
     --cal-split train \
-    --output-dir outputs/office_manualclean/rdk_x5 \
+    --output-dir outputs/drivable_stairs_discover_v1/rdk_x5 \
     --preprocess letterbox
 ```
 
@@ -145,9 +157,9 @@ uv run python verify_board.py \
     --host 192.168.31.63 \
     --user sunrise \
     --password sunrise \
-    --model-file outputs/office_manualclean/rdk_x5/best_352x640_bayese_640x352_nv12.bin \
+    --model-file outputs/drivable_stairs_discover_v1/rdk_x5/best_352x640_bayese_640x352_nv12.bin \
     --input-bin sample.rgbchw \
-    --output-dir outputs/office_manualclean/board_verify
+    --output-dir outputs/drivable_stairs_discover_v1/board_verify
 ```
 
 The verification script uploads the compiled model and one prepared input tensor, runs `hrt_model_exec infer`, and downloads the dump files for inspection.
