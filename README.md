@@ -173,7 +173,7 @@ Use this section as an append-only experiment log:
 
 | Date | Experiment | Scenes | Dataset | Validation Summary | Board Summary | Artifacts |
 | --- | --- | --- | --- | --- | --- | --- |
-| `2026-04-20` | `drivable_stairs_discover_day_infra1_v1` | `office + office_test + park`, `infra1 only` | `522 images (470 train / 52 val)` | `2-class best.pt: mask mAP50 0.995, mask mAP50-95 0.974` | `RDK X5 bag replay smoke test passed; 8 overlay frames saved from infra1 rosbag` | [pt](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/best.pt), [onnx](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/drivable_stairs_discover_day_infra1_v1_best_352x640.onnx), [bin](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/drivable_stairs_discover_day_infra1_v1_best_352x640_bayese_640x352_nv12.bin), [preview](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/x5_segment_viz_montage.jpg) |
+| `2026-04-20` | `drivable_stairs_discover_day_infra1_v1` | `office + office_test + park`, `infra1 only` | `522 images (470 train / 52 val)` | `2-class best.pt: mask mAP50 0.995, mask mAP50-95 0.974` | `RDK X5 bag replay smoke test passed; 8 overlay frames saved from infra1 rosbag` | [pt](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/best.pt), [onnx](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/drivable_stairs_discover_day_infra1_v1_best_352x640.onnx), [bin](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/drivable_stairs_discover_day_infra1_v1_best_352x640_bayese_640x352_nv12.bin) |
 | `2026-03-26` | `office_test_manualclean_v2` | `Office_test` | `652 images` | `9-class deployment comparison` | `yolov26_9cls: 14.909 ms, fg mIoU 0.7455`; `yolov26_9cls_dfl_adapter: 29.686 ms, fg mIoU 0.7347` | `Not kept in repo` |
 | `2026-03-27` | `open9_corridor_elevator_office_v1` | `corridor + elevator + Office_test` | `824 images (700 train / 124 val)` | `best mask mAP50 0.863, best mask mAP50-95 0.621` | `fg mIoU 0.7465, pixel acc 0.9334, latency unavailable in report` | [gif](experiments/2026-03-27_open9_corridor_elevator_office_v1/mixed_val_previews.gif), [pt](experiments/2026-03-27_open9_corridor_elevator_office_v1/best.pt), [onnx](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640.onnx), [bin](experiments/2026-03-27_open9_corridor_elevator_office_v1/open9_corridor_elevator_office_v1_best_352x640_bayese_640x352_nv12.bin), [wandb](https://wandb.ai/eddie18361268318-discover/tinyseg/runs/z3fth4j9) |
 
@@ -218,11 +218,6 @@ Artifacts kept in repo:
 - [best.pt](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/best.pt)
 - [drivable_stairs_discover_day_infra1_v1_best_352x640.onnx](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/drivable_stairs_discover_day_infra1_v1_best_352x640.onnx)
 - [drivable_stairs_discover_day_infra1_v1_best_352x640_bayese_640x352_nv12.bin](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/drivable_stairs_discover_day_infra1_v1_best_352x640_bayese_640x352_nv12.bin)
-- [x5_segment_viz_montage.jpg](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/x5_segment_viz_montage.jpg)
-
-Board preview:
-
-![2026-04-20 board preview](experiments/2026-04-20_drivable_stairs_discover_day_infra1_v1/x5_segment_viz_montage.jpg)
 
 ### 2026-03-27: Open9 Corridor + Elevator + Office
 
