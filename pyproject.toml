@@ -20,7 +20,6 @@ dependencies = [
 ]
 
 [project.scripts]
-tinyseg-merge-yolo = "tinyseg.merge:main"
 tinyseg-convert-labelme-drivable-stairs = "tinyseg.labelme_drivable_stairs:main"
 tinyseg-train = "tinyseg.train:main"
 tinyseg-export-onnx = "tinyseg.export:main"

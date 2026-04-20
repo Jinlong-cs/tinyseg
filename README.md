@@ -33,8 +33,7 @@ cd tinyseg
 uv venv
 uv sync
 
-uv run python convert_labelme_drivable_stairs.py --help
-uv run python merge_yolo_datasets.py --help
+uv run tinyseg-convert-labelme-drivable-stairs --help
 uv run python train_yolov26.py --help
 uv run python export_onnx.py --help
 uv run python quantize_x5.py --help
@@ -47,8 +46,6 @@ uv run python verify_board.py --help
 tinyseg/
 ├── README.md
 ├── pyproject.toml
-├── convert_labelme_drivable_stairs.py
-├── merge_yolo_datasets.py
 ├── train_yolov26.py
 ├── export_onnx.py
 ├── quantize_x5.py
@@ -66,7 +63,6 @@ tinyseg/
     ├── calibration.py
     ├── labelme_drivable_stairs.py
     ├── export.py
-    ├── merge.py
     ├── quantize.py
     ├── rdk_x5_config.py
     ├── train.py
@@ -96,7 +92,7 @@ The Labelme converter keeps only labels that map to these two classes. Labels su
 ## Convert Labelme Dataset
 
 ```bash
-uv run python convert_labelme_drivable_stairs.py \
+uv run tinyseg-convert-labelme-drivable-stairs \
     --inputs /home/supernova/wujinlong/dataset_discover \
     --output data/drivable_stairs_discover_v1 \
     --val-ratio 0.15 \
