@@ -65,7 +65,7 @@ def get_onnx_input_hw(onnx_path):
 
 
 def collect_calibration_images(args):
-    from tinyseg.calibration import collect_images_from_dir, collect_images_from_split, sample_images
+    from tinyseg.data.yolo_dataset import collect_images_from_dir, collect_images_from_split, sample_images
 
     if args.data_yaml:
         images = collect_images_from_split(args.data_yaml, split=args.cal_split)
@@ -86,8 +86,8 @@ def to_container_path(path_value, workspace):
 
 
 def run_quantize(args):
-    from tinyseg.calibration import write_calibration_tensors
-    from tinyseg.rdk_x5_config import write_config
+    from tinyseg.quantization.calibration import write_calibration_tensors
+    from tinyseg.quantization.rdk_x5_config import write_config
 
     workspace = Path(args.workspace).resolve()
     output_dir = Path(args.output_dir)

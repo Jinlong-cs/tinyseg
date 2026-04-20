@@ -7,7 +7,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-from tinyseg.calibration import collect_images_from_split
+from tinyseg.data.yolo_dataset import collect_images_from_split
 
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp"}

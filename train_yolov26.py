@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from tinyseg.train import main
+from tinyseg.training.train import main
 
 
 if __name__ == "__main__":
