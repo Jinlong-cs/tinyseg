@@ -19,7 +19,7 @@ It intentionally does not include:
 
 The repository is organized around a simple rule:
 - thin top-level entry scripts
-- reusable logic inside the `tinyseg/` package
+- reusable logic grouped by stage inside the `tinyseg/` package
 - explicit inputs and outputs for every stage
 
 The result is easier to read, easier to copy into a new workspace, and easier to maintain as a standalone product.
@@ -33,7 +33,7 @@ cd tinyseg
 uv venv
 uv sync
 
-uv run tinyseg-convert-labelme-drivable-stairs --help
+uv run python convert_labelme_drivable_stairs.py --help
 uv run python train_yolov26.py --help
 uv run python export_onnx.py --help
 uv run python quantize_x5.py --help
@@ -46,6 +46,7 @@ uv run python verify_board.py --help
 tinyseg/
 ├── README.md
 ├── pyproject.toml
+├── convert_labelme_drivable_stairs.py
 ├── train_yolov26.py
 ├── export_onnx.py
 ├── quantize_x5.py
@@ -60,14 +61,21 @@ tinyseg/
 │   └── run.sh
 └── tinyseg/
     ├── __init__.py
-    ├── calibration.py
-    ├── labelme_drivable_stairs.py
-    ├── export.py
-    ├── quantize.py
-    ├── rdk_x5_config.py
-    ├── train.py
-    ├── ultralytics_rdk.py
-    └── verify.py
+    ├── data/
+    │   ├── labelme_drivable_stairs.py
+    │   └── yolo_dataset.py
+    ├── training/
+    │   ├── train.py
+    │   └── wandb_logger.py
+    ├── export_onnx/
+    │   ├── export.py
+    │   └── ultralytics_rdk.py
+    ├── quantization/
+    │   ├── calibration.py
+    │   ├── quantize.py
+    │   └── rdk_x5_config.py
+    └── deploy/
+        └── verify.py
 ```
 
 Repository storage convention:
@@ -92,7 +100,7 @@ The Labelme converter keeps only labels that map to these two classes. Labels su
 ## Convert Labelme Dataset
 
 ```bash
-uv run tinyseg-convert-labelme-drivable-stairs \
+uv run python convert_labelme_drivable_stairs.py \
     --inputs /home/supernova/wujinlong/dataset_discover \
     --output data/drivable_stairs_discover_v1 \
     --val-ratio 0.15 \

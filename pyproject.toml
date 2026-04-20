@@ -20,11 +20,11 @@ dependencies = [
 ]
 
 [project.scripts]
-tinyseg-convert-labelme-drivable-stairs = "tinyseg.labelme_drivable_stairs:main"
-tinyseg-train = "tinyseg.train:main"
-tinyseg-export-onnx = "tinyseg.export:main"
-tinyseg-quantize-x5 = "tinyseg.quantize:main"
-tinyseg-verify-board = "tinyseg.verify:main"
+tinyseg-convert-labelme-drivable-stairs = "tinyseg.data.labelme_drivable_stairs:main"
+tinyseg-train = "tinyseg.training.train:main"
+tinyseg-export-onnx = "tinyseg.export_onnx.export:main"
+tinyseg-quantize-x5 = "tinyseg.quantization.quantize:main"
+tinyseg-verify-board = "tinyseg.deploy.verify:main"
 
-[tool.setuptools]
-packages = ["tinyseg"]
+[tool.setuptools.packages.find]
+include = ["tinyseg*"]

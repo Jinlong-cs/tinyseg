@@ -45,7 +45,7 @@ def run_training(args):
     SETTINGS["wandb"] = False
 
     if args.wandb:
-        from tinyseg.wandb_logger import configure_wandb_credentials, register_wandb_callbacks
+        from tinyseg.training.wandb_logger import configure_wandb_credentials, register_wandb_callbacks
 
         configure_wandb_credentials(
             api_key=args.wandb_api_key,

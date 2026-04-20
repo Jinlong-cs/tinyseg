@@ -56,7 +56,7 @@ def output_path_for(pt_path, output, imgsz):
 def export_checkpoint_fallback(pt_path, opset=11, imgsz=640, output=None):
     import torch
     from ultralytics import YOLO
-    from tinyseg.ultralytics_rdk import patch_model_for_rdk
+    from tinyseg.export_onnx.ultralytics_rdk import patch_model_for_rdk
 
     model = YOLO(pt_path)
     patch_model_for_rdk(model.model.model)
@@ -87,7 +87,7 @@ def export_checkpoint_fallback(pt_path, opset=11, imgsz=640, output=None):
 
 def export_checkpoint(pt_path, opset=11, imgsz=640, output=None):
     from ultralytics import YOLO
-    from tinyseg.ultralytics_rdk import patch_model_for_rdk
+    from tinyseg.export_onnx.ultralytics_rdk import patch_model_for_rdk
 
     model = YOLO(pt_path)
     patch_model_for_rdk(model.model.model)
