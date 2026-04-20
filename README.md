@@ -75,7 +75,12 @@ tinyseg/
     │   ├── quantize.py
     │   └── rdk_x5_config.py
     └── deploy/
-        └── verify.py
+        ├── verify.py
+        └── cpp/
+            ├── CMakeLists.txt
+            ├── segment_image_infer.cpp
+            ├── segment_infer.cpp
+            └── segment_infer.h
 ```
 
 Repository storage convention:
@@ -167,6 +172,33 @@ uv run python verify_board.py \
 ```
 
 The verification script uploads the compiled model and one prepared input tensor, runs `hrt_model_exec infer`, and downloads the dump files for inspection.
+
+## X5 Image Inference
+
+For board-side visualization on a directory of images, use the standalone C++ tool under `tinyseg/deploy/cpp`.
+
+Build on the X5 board:
+
+```bash
+cd tinyseg/tinyseg/deploy/cpp
+rm -rf build
+cmake -S . -B build
+cmake --build build -j1
+```
+
+Run on the X5 board:
+
+```bash
+./build/segment_image_infer \
+    --model /path/to/model.bin \
+    --input-dir /path/to/images \
+    --output-dir /path/to/output
+```
+
+Outputs:
+- `overlay/*.png`: source image with segmentation overlay
+- `mask_color/*.png`: rendered class mask
+- `summary.json`: per-image latency and saved paths
 
 ## Experiments
 

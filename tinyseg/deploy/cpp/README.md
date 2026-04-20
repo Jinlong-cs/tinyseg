@@ -1,0 +1,28 @@
+# TinySeg X5 Image Deploy
+
+This folder contains a standalone C++ image inference tool for Horizon RDK X5.
+
+It reuses the same `SegmentInfer` runtime as the 2-class TinyNav deployment, but runs on a directory of images instead of ROS topics.
+
+## Build On X5
+
+```bash
+cd tinyseg/tinyseg/deploy/cpp
+rm -rf build
+cmake -S . -B build
+cmake --build build -j1
+```
+
+## Run On X5
+
+```bash
+./build/segment_image_infer \
+  --model /path/to/tinyseg_2classes_infra1_352x640_bayese_640x352_nv12.bin \
+  --input-dir /path/to/images \
+  --output-dir /path/to/output
+```
+
+Outputs:
+- `overlay/*.png`: source image with color overlay
+- `mask_color/*.png`: rendered class mask
+- `summary.json`: per-image latency and output paths
