@@ -1,0 +1,30 @@
+name: drivable_stairs_discover_day_infra1_v1
+description: 2-class YOLO segmentation dataset for Discover day infra1 images.
+
+classes:
+  - drivable
+  - stairs
+
+inputs:
+  - day/office
+  - day/office_test
+  - day/park
+
+output: data/drivable_stairs_discover_day_infra1_v1
+
+scan:
+  include_path_regex:
+    - '(^|/)infra1(/|$)'
+  exclude_dir:
+    - labelme
+    - .git
+    - __pycache__
+
+split:
+  mode: temporal
+  val_ratio: 0.10
+  seed: 42
+
+options:
+  skip_empty: true
+  yaml_path_mode: relative

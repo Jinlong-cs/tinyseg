@@ -6,6 +6,7 @@ import random
 import re
 import shutil
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +48,18 @@ def build_parser():
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed for split-mode=random.")
     parser.add_argument(
+        "--include-path-regex",
+        action="append",
+        default=[],
+        help="Only keep JSON files whose input-relative path matches this regex. Can be provided multiple times.",
+    )
+    parser.add_argument(
+        "--exclude-path-regex",
+        action="append",
+        default=[],
+        help="Drop JSON files whose input-relative path matches this regex. Can be provided multiple times.",
+    )
+    parser.add_argument(
         "--exclude-dir",
         action="append",
         default=["labelme", ".git", "__pycache__"],
@@ -62,6 +75,22 @@ def build_parser():
         action="store_true",
         help="Replace an existing output dataset directory.",
     )
+    parser.add_argument(
+        "--yaml-path-mode",
+        choices=["absolute", "relative"],
+        default="absolute",
+        help="Use an absolute dataset path or a portable relative path in data.yaml.",
+    )
+    parser.add_argument(
+        "--recipe-name",
+        default=None,
+        help="Optional dataset recipe name written into conversion metadata.",
+    )
+    parser.add_argument(
+        "--recipe-path",
+        default=None,
+        help="Optional dataset recipe path written into conversion metadata.",
+    )
     return parser
 
 
@@ -72,6 +101,19 @@ def normalize_label(label_name: str) -> int | None:
 
 def should_skip(path: Path, excluded_dir_names: set[str]) -> bool:
     return any(part in excluded_dir_names for part in path.parts)
+
+
+def matches_any_pattern(text: str, patterns: list[str]) -> bool:
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def passes_path_filters(relative_path: Path, include_patterns: list[str], exclude_patterns: list[str]) -> bool:
+    normalized_path = relative_path.as_posix()
+    if include_patterns and not matches_any_pattern(normalized_path, include_patterns):
+        return False
+    if exclude_patterns and matches_any_pattern(normalized_path, exclude_patterns):
+        return False
+    return True
 
 
 def find_image_path(json_path: Path, image_name: str | None) -> Path | None:
@@ -171,15 +213,25 @@ def parse_labelme_json(json_path: Path, source_root: Path) -> tuple[dict[str, An
     return record, ignored_labels, None
 
 
-def collect_records(input_roots: list[Path], excluded_dir_names: set[str], skip_empty: bool):
+def collect_records(
+    input_roots: list[Path],
+    excluded_dir_names: set[str],
+    skip_empty: bool,
+    include_path_regex: list[str] | None = None,
+    exclude_path_regex: list[str] | None = None,
+):
     records = []
     ignored_label_counts = Counter()
     skipped = []
+    include_patterns = include_path_regex or []
+    exclude_patterns = exclude_path_regex or []
 
     for source_root in input_roots:
         for json_path in sorted(source_root.rglob("*.json")):
             relative = json_path.relative_to(source_root)
             if should_skip(relative, excluded_dir_names):
+                continue
+            if not passes_path_filters(relative, include_patterns, exclude_patterns):
                 continue
 
             record, ignored_labels, skip_reason = parse_labelme_json(json_path, source_root)
@@ -195,6 +247,25 @@ def collect_records(input_roots: list[Path], excluded_dir_names: set[str], skip_
 
     records.sort(key=lambda record: str(record["json_path"]))
     return records, ignored_label_counts, skipped
+
+
+def validate_unique_record_keys(records: list[dict[str, Any]]):
+    paths_by_key: dict[str, list[str]] = {}
+    for record in records:
+        paths_by_key.setdefault(record["key"], []).append(str(record["json_path"]))
+
+    duplicates = {key: paths for key, paths in paths_by_key.items() if len(paths) > 1}
+    if not duplicates:
+        return
+
+    examples = []
+    for key, paths in list(duplicates.items())[:5]:
+        examples.append(f"{key}: {paths}")
+    raise SystemExit(
+        "duplicate output sample keys detected; choose narrower input roots or rename raw files. "
+        + "Examples: "
+        + "; ".join(examples)
+    )
 
 
 def uniform_indices(total: int, target_count: int) -> list[int]:
@@ -312,16 +383,32 @@ def prepare_output_dir(output_root: Path, overwrite: bool):
 def write_records(records: list[dict[str, Any]], split: str, output_root: Path):
     image_dir = output_root / "images" / split
     label_dir = output_root / "labels" / split
+    index_entries = []
     for record in records:
         image_dst = image_dir / f"{record['key']}{record['image_suffix']}"
         label_dst = label_dir / f"{record['key']}.txt"
         shutil.copy2(record["image_path"], image_dst)
         label_dst.write_text("\n".join(record["yolo_lines"]) + ("\n" if record["yolo_lines"] else ""), encoding="utf-8")
+        index_entries.append(
+            {
+                "key": record["key"],
+                "split": split,
+                "source_root": str(record["source_root"]),
+                "source_json": str(record["json_path"]),
+                "source_image": str(record["image_path"]),
+                "output_image": str(image_dst.relative_to(output_root)),
+                "output_label": str(label_dst.relative_to(output_root)),
+                "labels": record["polygon_labels"],
+                "empty": record["empty"],
+            }
+        )
+    return index_entries
 
 
-def write_data_yaml(output_root: Path):
+def write_data_yaml(output_root: Path, path_mode: str):
+    dataset_path = "." if path_mode == "relative" else str(output_root.resolve())
     data = {
-        "path": str(output_root.resolve()),
+        "path": dataset_path,
         "train": "images/train",
         "val": "images/val",
         "nc": len(CLASS_NAMES),
@@ -356,11 +443,20 @@ def write_summary(
     train_polygon_counts, train_image_presence = count_labels(train_records)
     val_polygon_counts, val_image_presence = count_labels(val_records)
     summary = {
+        "recipe_name": getattr(args, "recipe_name", None),
+        "recipe_path": str(Path(args.recipe_path).resolve()) if getattr(args, "recipe_path", None) else None,
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_roots": [str(path.resolve()) for path in input_roots],
         "classes": {index: name for index, name in enumerate(CLASS_NAMES)},
+        "label_aliases": LABEL_TO_CLASS_ID,
+        "exclude_dir": list(args.exclude_dir or []),
+        "include_path_regex": list(getattr(args, "include_path_regex", []) or []),
+        "exclude_path_regex": list(getattr(args, "exclude_path_regex", []) or []),
         "val_ratio": args.val_ratio,
         "split_mode": args.split_mode,
         "seed": args.seed,
+        "skip_empty": args.skip_empty,
+        "yaml_path_mode": getattr(args, "yaml_path_mode", "absolute"),
         "images_total": len(all_records),
         "train_images": len(train_records),
         "val_images": len(val_records),
@@ -379,6 +475,61 @@ def write_summary(
     return summary_path
 
 
+def write_source_index(output_root: Path, index_entries: list[dict[str, Any]]):
+    index_path = output_root / "source_index.jsonl"
+    with index_path.open("w", encoding="utf-8") as index_file:
+        for entry in index_entries:
+            index_file.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    return index_path
+
+
+def write_split_files(output_root: Path, index_entries: list[dict[str, Any]]):
+    split_dir = output_root / "splits"
+    split_dir.mkdir(parents=True, exist_ok=True)
+    split_paths = {}
+    for split in ["train", "val"]:
+        split_path = split_dir / f"{split}.txt"
+        lines = [entry["output_image"] for entry in index_entries if entry["split"] == split]
+        split_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+        split_paths[split] = split_path
+    return split_paths
+
+
+def write_conversion_manifest(
+    output_root: Path,
+    data_yaml: Path,
+    summary_path: Path,
+    source_index_path: Path,
+    split_paths: dict[str, Path],
+    args: argparse.Namespace,
+):
+    manifest = {
+        "recipe_name": getattr(args, "recipe_name", None),
+        "recipe_path": str(Path(args.recipe_path).resolve()) if getattr(args, "recipe_path", None) else None,
+        "output_root": str(output_root.resolve()),
+        "data_yaml": str(data_yaml.relative_to(output_root)),
+        "summary_json": str(summary_path.relative_to(output_root)),
+        "source_index_jsonl": str(source_index_path.relative_to(output_root)),
+        "split_files": {split: str(path.relative_to(output_root)) for split, path in split_paths.items()},
+        "classes": {index: name for index, name in enumerate(CLASS_NAMES)},
+        "label_aliases": LABEL_TO_CLASS_ID,
+        "conversion_args": {
+            "inputs": list(args.inputs),
+            "val_ratio": args.val_ratio,
+            "split_mode": args.split_mode,
+            "seed": args.seed,
+            "exclude_dir": list(args.exclude_dir or []),
+            "include_path_regex": list(getattr(args, "include_path_regex", []) or []),
+            "exclude_path_regex": list(getattr(args, "exclude_path_regex", []) or []),
+            "skip_empty": args.skip_empty,
+            "yaml_path_mode": getattr(args, "yaml_path_mode", "absolute"),
+        },
+    }
+    manifest_path = output_root / "conversion_manifest.yaml"
+    manifest_path.write_text(yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return manifest_path
+
+
 def run_conversion(args):
     input_roots = [Path(item).resolve() for item in args.inputs]
     output_root = Path(args.output).resolve()
@@ -392,22 +543,31 @@ def run_conversion(args):
         input_roots=input_roots,
         excluded_dir_names=excluded_dir_names,
         skip_empty=args.skip_empty,
+        include_path_regex=getattr(args, "include_path_regex", []),
+        exclude_path_regex=getattr(args, "exclude_path_regex", []),
     )
     if not records:
         raise SystemExit("no Labelme records found after filtering")
+    validate_unique_record_keys(records)
 
     train_records, val_records = split_records(records, args.val_ratio, args.split_mode, args.seed)
     prepare_output_dir(output_root, args.overwrite)
-    write_records(train_records, "train", output_root)
-    write_records(val_records, "val", output_root)
-    data_yaml = write_data_yaml(output_root)
+    index_entries = []
+    index_entries.extend(write_records(train_records, "train", output_root))
+    index_entries.extend(write_records(val_records, "val", output_root))
+    data_yaml = write_data_yaml(output_root, getattr(args, "yaml_path_mode", "absolute"))
     summary_path = write_summary(output_root, input_roots, train_records, val_records, ignored_label_counts, skipped, args)
+    source_index_path = write_source_index(output_root, index_entries)
+    split_paths = write_split_files(output_root, index_entries)
+    manifest_path = write_conversion_manifest(output_root, data_yaml, summary_path, source_index_path, split_paths, args)
 
     print(f"Converted dataset: {output_root}")
     print(f"Train images:      {len(train_records)}")
     print(f"Val images:        {len(val_records)}")
     print(f"Data yaml:         {data_yaml}")
     print(f"Summary:           {summary_path}")
+    print(f"Source index:      {source_index_path}")
+    print(f"Manifest:          {manifest_path}")
 
 
 def main(argv=None):

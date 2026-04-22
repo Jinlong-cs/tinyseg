@@ -20,6 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
+tinyseg-prepare-yolo-dataset = "tinyseg.data.prepare_yolo_dataset:main"
 tinyseg-convert-labelme-drivable-stairs = "tinyseg.data.labelme_drivable_stairs:main"
 tinyseg-train = "tinyseg.training.train:main"
 tinyseg-export-onnx = "tinyseg.export_onnx.export:main"
