@@ -1,10 +1,20 @@
 import argparse
+import tempfile
 from pathlib import Path
+
+import yaml
 
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Train an Ultralytics YOLO segmentation model.")
-    parser.add_argument("--data", required=True, help="Path to YOLO data.yaml.")
+    parser.add_argument("--data", default=None, help="Path to YOLO data.yaml.")
+    parser.add_argument("--train-list", default=None, help="Path to train_list.txt.")
+    parser.add_argument("--val-list", default=None, help="Path to val_list.txt.")
+    parser.add_argument(
+        "--class-names",
+        default="drivable,stairs",
+        help="Comma-separated class names used with --train-list and --val-list.",
+    )
     parser.add_argument("--model", default="yolo11n-seg.pt", help="Base model or checkpoint path.")
     parser.add_argument("--epochs", type=int, default=120, help="Training epochs.")
     parser.add_argument("--imgsz", type=int, default=640, help="Training image size.")
@@ -36,6 +46,73 @@ def build_parser():
     return parser
 
 
+def parse_class_names(raw_names: str) -> list[str]:
+    names = [item.strip() for item in raw_names.split(",")]
+    names = [item for item in names if item]
+    if not names:
+        raise SystemExit("Provide at least one class name with --class-names.")
+    return names
+
+
+def resolve_list_lines(list_path: Path) -> list[str]:
+    resolved = []
+    for raw_line in list_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        line_path = Path(line)
+        if not line_path.is_absolute():
+            line_path = (list_path.parent / line_path).resolve()
+        resolved.append(str(line_path))
+    return resolved
+
+
+def write_resolved_list(lines: list[str], output_path: Path):
+    output_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+def prepare_data_source(args):
+    if args.data:
+        if args.train_list or args.val_list:
+            raise SystemExit("Use either --data or --train-list/--val-list, not both.")
+        return args.data, None
+
+    if not args.train_list or not args.val_list:
+        raise SystemExit("Provide either --data, or both --train-list and --val-list.")
+
+    train_list = Path(args.train_list).resolve()
+    val_list = Path(args.val_list).resolve()
+    if not train_list.is_file():
+        raise SystemExit(f"missing train list: {train_list}")
+    if not val_list.is_file():
+        raise SystemExit(f"missing val list: {val_list}")
+
+    temp_dir = tempfile.TemporaryDirectory(prefix="tinyseg_train_lists_")
+    temp_root = Path(temp_dir.name)
+    train_txt = temp_root / "train_list.txt"
+    val_txt = temp_root / "val_list.txt"
+    write_resolved_list(resolve_list_lines(train_list), train_txt)
+    write_resolved_list(resolve_list_lines(val_list), val_txt)
+
+    class_names = parse_class_names(args.class_names)
+    data_yaml = temp_root / "data.yaml"
+    data_yaml.write_text(
+        yaml.safe_dump(
+            {
+                "path": str(temp_root),
+                "train": str(train_txt),
+                "val": str(val_txt),
+                "nc": len(class_names),
+                "names": {index: name for index, name in enumerate(class_names)},
+            },
+            sort_keys=False,
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+    return str(data_yaml), temp_dir
+
+
 def run_training(args):
     from ultralytics import YOLO
     from ultralytics.utils import SETTINGS
@@ -53,13 +130,14 @@ def run_training(args):
             workspace_root=repo_root,
         )
 
+    data_source, temp_dir = prepare_data_source(args)
     model = YOLO(args.model)
     if args.wandb:
         register_wandb_callbacks(model, args)
 
     try:
         results = model.train(
-            data=args.data,
+            data=data_source,
             epochs=args.epochs,
             imgsz=args.imgsz,
             batch=args.batch,
@@ -73,6 +151,8 @@ def run_training(args):
             name=args.name,
         )
     finally:
+        if temp_dir is not None:
+            temp_dir.cleanup()
         SETTINGS["wandb"] = original_wandb_setting
 
     save_dir = Path(results.save_dir).resolve()
