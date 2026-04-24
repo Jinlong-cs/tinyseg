@@ -136,19 +136,25 @@ For ad-hoc conversion, call the lower-level Labelme converter directly:
 uv run python convert_labelme_drivable_stairs.py \
     --inputs /path/to/dataset_discover \
     --output data/drivable_stairs_discover_v1 \
-    --val-ratio 0.15 \
+    --val-ratio 0.10 \
     --split-mode temporal \
     --yaml-path-mode relative \
     --overwrite
 ```
 
-The converter recursively scans Labelme JSON files, writes YOLO-seg `images/{train,val}` and `labels/{train,val}`, and creates `data.yaml` plus `summary.json`. The split logic keeps singleton classes, such as a rare stairs sample, in the training split instead of leaving a class absent from training.
+The converter recursively scans Labelme JSON files, writes mirrored YOLO-seg `images/...` and `labels/...`, and creates:
+- `train_list.txt`
+- `val_list.txt`
+
+Each list file contains image paths relative to the converted dataset root. The split is applied per source leaf directory so `day_office/infra1`, `day_park/infra1`, and similar groups all keep their own train/val coverage.
 
 ## Training
 
 ```bash
 uv run python train_yolov26.py \
-    --data data/drivable_stairs_discover_v1/data.yaml \
+    --train-list data/drivable_stairs_discover_v1/train_list.txt \
+    --val-list data/drivable_stairs_discover_v1/val_list.txt \
+    --class-names drivable,stairs \
     --model yolo26n-seg.pt \
     --epochs 150 \
     --imgsz 640 \
