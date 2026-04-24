@@ -4,6 +4,7 @@ TinySeg is a small training-side repository for YOLO segmentation on Horizon RDK
 
 It keeps the model workflow in one place:
 - convert Labelme annotations to a 2-class YOLO-seg dataset
+- rebuild YOLO training datasets from committed conversion recipes
 - train a segmentation model
 - export a board-friendly ONNX
 - run PTQ quantization and compile a `.bin`
@@ -33,6 +34,7 @@ cd tinyseg
 uv venv
 uv sync
 
+uv run python prepare_yolo_dataset.py --help
 uv run python convert_labelme_drivable_stairs.py --help
 uv run python train_yolov26.py --help
 uv run python export_onnx.py --help
@@ -46,6 +48,7 @@ uv run python verify_board.py --help
 tinyseg/
 ├── README.md
 ├── pyproject.toml
+├── prepare_yolo_dataset.py
 ├── convert_labelme_drivable_stairs.py
 ├── train_yolov26.py
 ├── export_onnx.py
@@ -55,6 +58,10 @@ tinyseg/
 ├── experiments/
 ├── runs/
 ├── outputs/
+├── configs/
+│   └── datasets/
+├── docs/
+│   └── data_reproducibility.md
 ├── dev/
 │   ├── Dockerfile
 │   ├── build.sh
@@ -62,6 +69,7 @@ tinyseg/
 └── tinyseg/
     ├── __init__.py
     ├── data/
+    │   ├── prepare_yolo_dataset.py
     │   ├── labelme_drivable_stairs.py
     │   └── yolo_dataset.py
     ├── training/
@@ -75,7 +83,12 @@ tinyseg/
     │   ├── quantize.py
     │   └── rdk_x5_config.py
     └── deploy/
-        └── verify.py
+        ├── verify.py
+        └── cpp/
+            ├── CMakeLists.txt
+            ├── segment_image_infer.cpp
+            ├── segment_infer.cpp
+            └── segment_infer.h
 ```
 
 Repository storage convention:
@@ -99,12 +112,33 @@ The Labelme converter keeps only labels that map to these two classes. Labels su
 
 ## Convert Labelme Dataset
 
+For reproducible experiments, prefer the recipe-driven converter. The raw data stays outside this repo; the recipe records input subfolders, path filters, split settings, and output location.
+
+```bash
+uv run python prepare_yolo_dataset.py \
+    --config configs/datasets/drivable_stairs_discover_day_infra1.yaml \
+    --raw-root /path/to/dataset_discover \
+    --overwrite
+```
+
+This writes a YOLO-seg dataset plus audit files:
+- `data.yaml`: Ultralytics training entry
+- `summary.json`: counts, ignored labels, split settings
+- `conversion_manifest.yaml`: exact recipe metadata and conversion arguments
+- `source_index.jsonl`: source JSON/image to output image/label mapping
+- `splits/train.txt` and `splits/val.txt`: split membership
+
+See [data reproducibility docs](docs/data_reproducibility.md) for raw data layout, label aliases, and recipe guidelines.
+
+For ad-hoc conversion, call the lower-level Labelme converter directly:
+
 ```bash
 uv run python convert_labelme_drivable_stairs.py \
-    --inputs /home/supernova/wujinlong/dataset_discover \
+    --inputs /path/to/dataset_discover \
     --output data/drivable_stairs_discover_v1 \
     --val-ratio 0.15 \
     --split-mode temporal \
+    --yaml-path-mode relative \
     --overwrite
 ```
 
@@ -167,6 +201,33 @@ uv run python verify_board.py \
 ```
 
 The verification script uploads the compiled model and one prepared input tensor, runs `hrt_model_exec infer`, and downloads the dump files for inspection.
+
+## X5 Image Inference
+
+For board-side visualization on a directory of images, use the standalone C++ tool under `tinyseg/deploy/cpp`.
+
+Build on the X5 board:
+
+```bash
+cd tinyseg/tinyseg/deploy/cpp
+rm -rf build
+cmake -S . -B build
+cmake --build build -j1
+```
+
+Run on the X5 board:
+
+```bash
+./build/segment_image_infer \
+    --model /path/to/model.bin \
+    --input-dir /path/to/images \
+    --output-dir /path/to/output
+```
+
+Outputs:
+- `overlay/*.png`: source image with segmentation overlay
+- `mask_color/*.png`: rendered class mask
+- `summary.json`: per-image latency and saved paths
 
 ## Experiments
 
