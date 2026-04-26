@@ -119,79 +119,91 @@ def _iter_train_images(data_yaml: str) -> list[Path]:
     return [Path(path) for path in collect_images_from_split(data_yaml, split="train") if Path(path).suffix.lower() in IMAGE_EXTS]
 
 
-def _draw_train_sample(data_yaml: str, names: list[str]) -> np.ndarray | None:
-    for image_path in _iter_train_images(data_yaml):
-        label_path = _label_path_from_image(image_path)
-        if not label_path.is_file() or label_path.stat().st_size == 0:
+def _draw_train_sample_image(image_path: Path, names: list[str]) -> np.ndarray | None:
+    label_path = _label_path_from_image(image_path)
+    if not label_path.is_file() or label_path.stat().st_size == 0:
+        return None
+
+    image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+    if image is None:
+        return None
+
+    height, width = image.shape[:2]
+    overlay = image.copy()
+    vis = image.copy()
+    raw_lines = label_path.read_text(encoding="utf-8").splitlines()
+
+    for raw_line in raw_lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        values = [float(item) for item in line.split()]
+        if len(values) < 5:
             continue
 
-        image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
-        if image is None:
-            continue
+        class_id = int(values[0])
+        color = PALETTE[class_id % len(PALETTE)]
+        class_name = names[class_id] if 0 <= class_id < len(names) else str(class_id)
+        coords = values[1:]
 
-        height, width = image.shape[:2]
-        overlay = image.copy()
-        vis = image.copy()
-        raw_lines = label_path.read_text(encoding="utf-8").splitlines()
+        if len(coords) >= 6 and len(coords) % 2 == 0:
+            pts = np.array(coords, dtype=np.float32).reshape(-1, 2)
+            pts[:, 0] *= width
+            pts[:, 1] *= height
+            pts = np.round(pts).astype(np.int32)
+            cv2.fillPoly(overlay, [pts], color)
+            cv2.polylines(vis, [pts], isClosed=True, color=color, thickness=2)
+            anchor = pts[0]
+            text_pos = (int(anchor[0]), max(18, int(anchor[1]) - 6))
+        else:
+            x_c, y_c, box_w, box_h = coords[:4]
+            x1 = int(round((x_c - box_w / 2.0) * width))
+            y1 = int(round((y_c - box_h / 2.0) * height))
+            x2 = int(round((x_c + box_w / 2.0) * width))
+            y2 = int(round((y_c + box_h / 2.0) * height))
+            cv2.rectangle(overlay, (x1, y1), (x2, y2), color, thickness=-1)
+            cv2.rectangle(vis, (x1, y1), (x2, y2), color, thickness=2)
+            text_pos = (x1, max(18, y1 - 6))
 
-        for raw_line in raw_lines:
-            line = raw_line.strip()
-            if not line:
-                continue
-            values = [float(item) for item in line.split()]
-            if len(values) < 5:
-                continue
-
-            class_id = int(values[0])
-            color = PALETTE[class_id % len(PALETTE)]
-            class_name = names[class_id] if 0 <= class_id < len(names) else str(class_id)
-            coords = values[1:]
-
-            if len(coords) >= 6 and len(coords) % 2 == 0:
-                pts = np.array(coords, dtype=np.float32).reshape(-1, 2)
-                pts[:, 0] *= width
-                pts[:, 1] *= height
-                pts = np.round(pts).astype(np.int32)
-                cv2.fillPoly(overlay, [pts], color)
-                cv2.polylines(vis, [pts], isClosed=True, color=color, thickness=2)
-                anchor = pts[0]
-                text_pos = (int(anchor[0]), max(18, int(anchor[1]) - 6))
-            else:
-                x_c, y_c, box_w, box_h = coords[:4]
-                x1 = int(round((x_c - box_w / 2.0) * width))
-                y1 = int(round((y_c - box_h / 2.0) * height))
-                x2 = int(round((x_c + box_w / 2.0) * width))
-                y2 = int(round((y_c + box_h / 2.0) * height))
-                cv2.rectangle(overlay, (x1, y1), (x2, y2), color, thickness=-1)
-                cv2.rectangle(vis, (x1, y1), (x2, y2), color, thickness=2)
-                text_pos = (x1, max(18, y1 - 6))
-
-            cv2.putText(
-                vis,
-                class_name,
-                text_pos,
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                color,
-                2,
-                cv2.LINE_AA,
-            )
-
-        vis = cv2.addWeighted(overlay, 0.30, vis, 0.70, 0.0)
         cv2.putText(
             vis,
-            image_path.name,
-            (12, 28),
+            class_name,
+            text_pos,
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
+            0.55,
+            color,
             2,
             cv2.LINE_AA,
         )
-        return cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
 
-    return None
+    vis = cv2.addWeighted(overlay, 0.30, vis, 0.70, 0.0)
+    cv2.putText(
+        vis,
+        image_path.name,
+        (12, 28),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+    return cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
 
+
+def _draw_train_samples(data_yaml: str, names: list[str], sample_count: int) -> list[tuple[Path, np.ndarray]]:
+    samples = []
+    if sample_count <= 0:
+        return samples
+
+    for image_path in _iter_train_images(data_yaml):
+        sample = _draw_train_sample_image(image_path, names)
+        if sample is None:
+            continue
+        samples.append((image_path, sample))
+        if len(samples) >= sample_count:
+            break
+
+    return samples
 
 class TinySegWandbLogger:
     def __init__(self, args):
@@ -200,7 +212,7 @@ class TinySegWandbLogger:
         self.tags = _normalize_tags(args.wandb_tags)
         self.resume = args.wandb_resume
         self.run_id = args.wandb_run_id
-        self.log_train_sample = True
+        self.sample_count = max(0, args.wandb_sample_count)
         self._sample_logged = False
         self._wandb = None
 
@@ -245,10 +257,17 @@ class TinySegWandbLogger:
                 init_kwargs["resume"] = self.resume
             wb.init(**init_kwargs)
 
-        if self.log_train_sample and not self._sample_logged:
-            sample = _draw_train_sample(trainer.args.data, _resolve_names(trainer.data.get("names", [])))
-            if sample is not None:
-                self._log({"train/sample": wb.Image(sample)}, step=0)
+        if self.sample_count > 0 and not self._sample_logged:
+            samples = _draw_train_samples(
+                trainer.args.data,
+                _resolve_names(trainer.data.get("names", [])),
+                self.sample_count,
+            )
+            if samples:
+                table = wb.Table(columns=["image_path", "sample"])
+                for image_path, sample in samples:
+                    table.add_data(str(image_path), wb.Image(sample))
+                self._log({"train/samples": table}, step=0)
                 self._sample_logged = True
 
     def on_train_epoch_end(self, trainer) -> None:

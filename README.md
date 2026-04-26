@@ -163,6 +163,8 @@ uv run python train_yolov26.py \
     --name drivable_stairs_discover_v1
 ```
 
+W&B logging is enabled by default. Provide `WANDB_API_KEY`, pass `--wandb-api-key`, or create a local `.wandb_api_key` file before training. Each run logs startup train-sample visualizations under `train/samples`; use `--no-wandb` to disable logging or `--wandb-sample-count` to change how many labeled samples are uploaded.
+
 Ultralytics outputs follow the standard layout under `runs/seg/<name>/`.
 
 ## Export ONNX
