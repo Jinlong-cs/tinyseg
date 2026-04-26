@@ -115,11 +115,16 @@ def _resolve_names(names: Any) -> list[str]:
     return []
 
 
-def _iter_train_images(data_yaml: str) -> list[Path]:
-    return [Path(path) for path in collect_images_from_split(data_yaml, split="train") if Path(path).suffix.lower() in IMAGE_EXTS]
+def _iter_split_images(data_yaml: str, split: str) -> list[Path]:
+    return [Path(path) for path in collect_images_from_split(data_yaml, split=split) if Path(path).suffix.lower() in IMAGE_EXTS]
 
 
-def _draw_train_sample_image(image_path: Path, names: list[str]) -> np.ndarray | None:
+def _put_title(image: np.ndarray, title: str) -> None:
+    cv2.rectangle(image, (0, 0), (image.shape[1], 42), (0, 0, 0), thickness=-1)
+    cv2.putText(image, title, (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+
+
+def _draw_label_overlay(image_path: Path, names: list[str], title: str) -> np.ndarray | None:
     label_path = _label_path_from_image(image_path)
     if not label_path.is_file() or label_path.stat().st_size == 0:
         return None
@@ -137,7 +142,10 @@ def _draw_train_sample_image(image_path: Path, names: list[str]) -> np.ndarray |
         line = raw_line.strip()
         if not line:
             continue
-        values = [float(item) for item in line.split()]
+        try:
+            values = [float(item) for item in line.split()]
+        except ValueError:
+            continue
         if len(values) < 5:
             continue
 
@@ -154,7 +162,7 @@ def _draw_train_sample_image(image_path: Path, names: list[str]) -> np.ndarray |
             cv2.fillPoly(overlay, [pts], color)
             cv2.polylines(vis, [pts], isClosed=True, color=color, thickness=2)
             anchor = pts[0]
-            text_pos = (int(anchor[0]), max(18, int(anchor[1]) - 6))
+            text_pos = (int(anchor[0]), max(60, int(anchor[1]) - 6))
         else:
             x_c, y_c, box_w, box_h = coords[:4]
             x1 = int(round((x_c - box_w / 2.0) * width))
@@ -163,31 +171,85 @@ def _draw_train_sample_image(image_path: Path, names: list[str]) -> np.ndarray |
             y2 = int(round((y_c + box_h / 2.0) * height))
             cv2.rectangle(overlay, (x1, y1), (x2, y2), color, thickness=-1)
             cv2.rectangle(vis, (x1, y1), (x2, y2), color, thickness=2)
-            text_pos = (x1, max(18, y1 - 6))
+            text_pos = (x1, max(60, y1 - 6))
 
-        cv2.putText(
-            vis,
-            class_name,
-            text_pos,
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.55,
-            color,
-            2,
-            cv2.LINE_AA,
-        )
+        cv2.putText(vis, class_name, text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2, cv2.LINE_AA)
 
     vis = cv2.addWeighted(overlay, 0.30, vis, 0.70, 0.0)
-    cv2.putText(
-        vis,
-        image_path.name,
-        (12, 28),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
-        (255, 255, 255),
-        2,
-        cv2.LINE_AA,
-    )
+    _put_title(vis, title)
+    cv2.putText(vis, image_path.name, (12, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2, cv2.LINE_AA)
     return cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
+
+
+def _draw_prediction_overlay(image_path: Path, result: Any, names: list[str]) -> np.ndarray | None:
+    image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+    if image is None:
+        return None
+
+    overlay = image.copy()
+    vis = image.copy()
+    boxes = getattr(result, "boxes", None)
+    masks = getattr(result, "masks", None)
+    class_ids = []
+    confidences = []
+    if boxes is not None and boxes.cls is not None:
+        class_ids = [int(value) for value in boxes.cls.detach().cpu().numpy().tolist()]
+    if boxes is not None and boxes.conf is not None:
+        confidences = [float(value) for value in boxes.conf.detach().cpu().numpy().tolist()]
+
+    polygons = []
+    if masks is not None and masks.xy is not None:
+        polygons = masks.xy
+
+    if polygons:
+        for index, polygon in enumerate(polygons):
+            pts = np.asarray(polygon, dtype=np.int32)
+            if len(pts) < 3:
+                continue
+            class_id = class_ids[index] if index < len(class_ids) else 0
+            confidence = confidences[index] if index < len(confidences) else None
+            color = PALETTE[class_id % len(PALETTE)]
+            class_name = names[class_id] if 0 <= class_id < len(names) else str(class_id)
+            label = f"{class_name} {confidence:.2f}" if confidence is not None else class_name
+            cv2.fillPoly(overlay, [pts], color)
+            cv2.polylines(vis, [pts], isClosed=True, color=color, thickness=2)
+            anchor = pts[0]
+            text_pos = (int(anchor[0]), max(60, int(anchor[1]) - 6))
+            cv2.putText(vis, label, text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2, cv2.LINE_AA)
+    elif boxes is not None and boxes.xyxy is not None:
+        xyxy = boxes.xyxy.detach().cpu().numpy()
+        for index, box in enumerate(xyxy):
+            class_id = class_ids[index] if index < len(class_ids) else 0
+            confidence = confidences[index] if index < len(confidences) else None
+            color = PALETTE[class_id % len(PALETTE)]
+            class_name = names[class_id] if 0 <= class_id < len(names) else str(class_id)
+            label = f"{class_name} {confidence:.2f}" if confidence is not None else class_name
+            x1, y1, x2, y2 = [int(round(value)) for value in box]
+            cv2.rectangle(vis, (x1, y1), (x2, y2), color, thickness=2)
+            cv2.putText(vis, label, (x1, max(60, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2, cv2.LINE_AA)
+    else:
+        cv2.putText(vis, "no prediction", (12, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2, cv2.LINE_AA)
+
+    vis = cv2.addWeighted(overlay, 0.30, vis, 0.70, 0.0)
+    _put_title(vis, "Prediction")
+    cv2.putText(vis, image_path.name, (12, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2, cv2.LINE_AA)
+    return cv2.cvtColor(vis, cv2.COLOR_BGR2RGB)
+
+
+def _resize_to_height(image: np.ndarray, target_height: int) -> np.ndarray:
+    height, width = image.shape[:2]
+    if height == target_height:
+        return image
+    target_width = int(round(width * target_height / max(1, height)))
+    return cv2.resize(image, (target_width, target_height), interpolation=cv2.INTER_AREA)
+
+
+def _side_by_side(left: np.ndarray, right: np.ndarray) -> np.ndarray:
+    target_height = min(left.shape[0], right.shape[0], 720)
+    left = _resize_to_height(left, target_height)
+    right = _resize_to_height(right, target_height)
+    gap = np.full((target_height, 12, 3), 255, dtype=np.uint8)
+    return np.concatenate([left, gap, right], axis=1)
 
 
 def _draw_train_samples(data_yaml: str, names: list[str], sample_count: int) -> list[tuple[Path, np.ndarray]]:
@@ -195,8 +257,8 @@ def _draw_train_samples(data_yaml: str, names: list[str], sample_count: int) -> 
     if sample_count <= 0:
         return samples
 
-    for image_path in _iter_train_images(data_yaml):
-        sample = _draw_train_sample_image(image_path, names)
+    for image_path in _iter_split_images(data_yaml, split="train"):
+        sample = _draw_label_overlay(image_path, names, title="Train Ground Truth")
         if sample is None:
             continue
         samples.append((image_path, sample))
@@ -204,6 +266,46 @@ def _draw_train_samples(data_yaml: str, names: list[str], sample_count: int) -> 
             break
 
     return samples
+
+
+def _draw_prediction_samples(model_path: Path, data_yaml: str, names: list[str], sample_count: int, imgsz: int, device: str):
+    if sample_count <= 0:
+        return []
+
+    image_paths = []
+    gt_images = []
+    for image_path in _iter_split_images(data_yaml, split="val"):
+        ground_truth = _draw_label_overlay(image_path, names, title="Ground Truth")
+        if ground_truth is None:
+            continue
+        image_paths.append(image_path)
+        gt_images.append(ground_truth)
+        if len(image_paths) >= sample_count:
+            break
+
+    if not image_paths:
+        return []
+
+    from ultralytics import YOLO
+
+    model = YOLO(str(model_path))
+    results = model.predict(
+        source=[str(path) for path in image_paths],
+        imgsz=imgsz,
+        device=device,
+        save=False,
+        verbose=False,
+    )
+
+    samples = []
+    for image_path, ground_truth, result in zip(image_paths, gt_images, results):
+        prediction = _draw_prediction_overlay(image_path, result, names)
+        if prediction is None:
+            continue
+        comparison = _side_by_side(ground_truth, prediction)
+        samples.append((image_path, ground_truth, prediction, comparison))
+    return samples
+
 
 class TinySegWandbLogger:
     def __init__(self, args):
@@ -213,7 +315,10 @@ class TinySegWandbLogger:
         self.resume = args.wandb_resume
         self.run_id = args.wandb_run_id
         self.sample_count = max(0, args.wandb_sample_count)
+        pred_sample_count = args.wandb_pred_sample_count
+        self.pred_sample_count = self.sample_count if pred_sample_count is None else max(0, pred_sample_count)
         self._sample_logged = False
+        self._prediction_samples_logged = False
         self._wandb = None
 
     def _load_wandb(self):
@@ -264,10 +369,10 @@ class TinySegWandbLogger:
                 self.sample_count,
             )
             if samples:
-                table = wb.Table(columns=["image_path", "sample"])
+                table = wb.Table(columns=["image_path", "ground_truth"])
                 for image_path, sample in samples:
                     table.add_data(str(image_path), wb.Image(sample))
-                self._log({"train/samples": table}, step=0)
+                self._log({"train/ground_truth_samples": table}, step=0)
                 self._sample_logged = True
 
     def on_train_epoch_end(self, trainer) -> None:
@@ -280,6 +385,37 @@ class TinySegWandbLogger:
         val_loss, val_metrics = _split_metrics(trainer.metrics)
         self._log({**val_loss, **val_metrics}, step=trainer.epoch + 1)
 
+    def _log_prediction_samples(self, trainer) -> None:
+        if self.pred_sample_count <= 0 or self._prediction_samples_logged:
+            return
+
+        wb = self._load_wandb()
+        model_path = trainer.best if trainer.best.exists() else getattr(trainer, "last", None)
+        if model_path is None or not Path(model_path).exists():
+            return
+
+        try:
+            samples = _draw_prediction_samples(
+                model_path=Path(model_path),
+                data_yaml=trainer.args.data,
+                names=_resolve_names(trainer.data.get("names", [])),
+                sample_count=self.pred_sample_count,
+                imgsz=trainer.args.imgsz,
+                device=str(trainer.args.device),
+            )
+        except Exception as exc:
+            print(f"W&B prediction sample logging failed: {exc}")
+            return
+
+        if not samples:
+            return
+
+        table = wb.Table(columns=["image_path", "ground_truth", "prediction", "comparison"])
+        for image_path, ground_truth, prediction, comparison in samples:
+            table.add_data(str(image_path), wb.Image(ground_truth), wb.Image(prediction), wb.Image(comparison))
+        self._log({"val/prediction_samples": table}, step=trainer.epoch + 1)
+        self._prediction_samples_logged = True
+
     def on_train_end(self, trainer) -> None:
         if not _is_rank0():
             return
@@ -287,6 +423,8 @@ class TinySegWandbLogger:
         wb = self._load_wandb()
         if wb.run is None:
             return
+
+        self._log_prediction_samples(trainer)
 
         if trainer.best.exists():
             artifact = wb.Artifact(name=f"{wb.run.id}-best", type="model")
