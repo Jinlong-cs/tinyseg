@@ -32,6 +32,12 @@ def build_parser():
     wandb_group.add_argument("--no-wandb", dest="wandb", action="store_false", help="Disable W&B logging.")
     parser.add_argument("--wandb-project", default="tinyseg", help="W&B project name.")
     parser.add_argument("--wandb-sample-count", type=int, default=8, help="Number of labeled train samples to log to W&B at startup.")
+    parser.add_argument(
+        "--wandb-pred-sample-count",
+        type=int,
+        default=None,
+        help="Number of validation GT-vs-prediction samples to log to W&B after training. Defaults to --wandb-sample-count.",
+    )
     parser.add_argument("--wandb-name", default=None, help="Optional W&B run name. Defaults to --name.")
     parser.add_argument("--wandb-tags", default=None, help="Comma-separated W&B tags.")
     parser.add_argument("--wandb-resume", default=None, help="Optional W&B resume mode.")
