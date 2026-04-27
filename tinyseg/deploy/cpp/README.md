@@ -22,6 +22,8 @@ cmake --build build -j1
   --output-dir /path/to/output
 ```
 
+The runtime reads the input tensor shape from the compiled model. For the current TinySeg deployment model, export ONNX with `--imgsz 352 640` and compile the resulting `640x352_nv12` model; the default preprocessing letterboxes each source image into that shape using the same `114` padding value as YOLO/Ultralytics calibration.
+
 Outputs:
 - `overlay/*.png`: source image with color overlay
 - `mask_color/*.png`: rendered class mask

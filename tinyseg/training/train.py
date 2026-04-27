@@ -38,6 +38,13 @@ def build_parser():
         default=None,
         help="Number of validation GT-vs-prediction samples to log to W&B after training. Defaults to --wandb-sample-count.",
     )
+    parser.add_argument(
+        "--wandb-pred-imgsz",
+        type=int,
+        nargs="+",
+        default=[352, 640],
+        help="Prediction sample image size. Use one value or two values as h w. Defaults to deployment size 352 640.",
+    )
     parser.add_argument("--wandb-name", default=None, help="Optional W&B run name. Defaults to --name.")
     parser.add_argument("--wandb-tags", default=None, help="Comma-separated W&B tags.")
     parser.add_argument("--wandb-resume", default=None, help="Optional W&B resume mode.")

@@ -268,7 +268,18 @@ def _draw_train_samples(data_yaml: str, names: list[str], sample_count: int) -> 
     return samples
 
 
-def _draw_prediction_samples(model_path: Path, data_yaml: str, names: list[str], sample_count: int, imgsz: int, device: str):
+def _normalize_imgsz(imgsz_values: Any) -> int | tuple[int, int]:
+    if isinstance(imgsz_values, int):
+        return imgsz_values
+    values = list(imgsz_values)
+    if len(values) == 1:
+        return int(values[0])
+    if len(values) == 2:
+        return int(values[0]), int(values[1])
+    raise ValueError("W&B prediction image size expects one value or two values: h w")
+
+
+def _draw_prediction_samples(model_path: Path, data_yaml: str, names: list[str], sample_count: int, imgsz: int | tuple[int, int], device: str):
     if sample_count <= 0:
         return []
 
@@ -317,6 +328,7 @@ class TinySegWandbLogger:
         self.sample_count = max(0, args.wandb_sample_count)
         pred_sample_count = args.wandb_pred_sample_count
         self.pred_sample_count = self.sample_count if pred_sample_count is None else max(0, pred_sample_count)
+        self.pred_imgsz = _normalize_imgsz(args.wandb_pred_imgsz)
         self._sample_logged = False
         self._prediction_samples_logged = False
         self._wandb = None
@@ -400,7 +412,7 @@ class TinySegWandbLogger:
                 data_yaml=trainer.args.data,
                 names=_resolve_names(trainer.data.get("names", [])),
                 sample_count=self.pred_sample_count,
-                imgsz=trainer.args.imgsz,
+                imgsz=self.pred_imgsz,
                 device=str(trainer.args.device),
             )
         except Exception as exc:

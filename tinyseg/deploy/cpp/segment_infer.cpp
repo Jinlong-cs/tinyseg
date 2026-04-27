@@ -12,6 +12,8 @@
 namespace
 {
 
+constexpr int kLetterboxPadValue = 114;
+
 struct ProtoShape
 {
     int h = 0;
@@ -282,7 +284,7 @@ cv::Mat SegmentInfer::preprocess(const cv::Mat &image_bgr)
 
     cv::resize(image_bgr, resized, cv::Size(new_w, new_h), 0, 0, cv::INTER_LINEAR);
     cv::copyMakeBorder(resized, resized, y_shift_, bottom_pad, x_shift_, right_pad,
-                       cv::BORDER_CONSTANT, cv::Scalar(127, 127, 127));
+                       cv::BORDER_CONSTANT, cv::Scalar(kLetterboxPadValue, kLetterboxPadValue, kLetterboxPadValue));
     return resized;
 }
 
