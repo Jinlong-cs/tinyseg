@@ -185,7 +185,8 @@ uv run python quantize_x5.py \
     --data-yaml data/drivable_stairs_discover_v1/data.yaml \
     --cal-split train \
     --output-dir outputs/drivable_stairs_discover_v1/rdk_x5 \
-    --preprocess letterbox
+    --preprocess letterbox \
+    --quantized int16
 ```
 
 This stage:
@@ -193,6 +194,9 @@ This stage:
 - writes `config.yaml`
 - launches `hb_mapper` in Docker
 - saves the final `.bin` next to the config and logs
+
+The all-int16 mapper template is kept at
+`configs/rdk_x5/yolo_seg_all_int16_640x352_nv12.yaml`.
 
 ## Board Verification
 
