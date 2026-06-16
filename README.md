@@ -154,7 +154,7 @@ uv run python train_yolov26.py \
     --val-list data/drivable_stairs_discover_v1/val_list.txt \
     --class-names drivable,stairs \
     --model yolo26n-seg.pt \
-    --epochs 150 \
+    --epochs 200 \
     --imgsz 640 \
     --batch 8 \
     --device 0 \

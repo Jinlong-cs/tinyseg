@@ -16,7 +16,7 @@ def build_parser():
         help="Comma-separated class names used with --train-list and --val-list.",
     )
     parser.add_argument("--model", default="yolo11n-seg.pt", help="Base model or checkpoint path.")
-    parser.add_argument("--epochs", type=int, default=120, help="Training epochs.")
+    parser.add_argument("--epochs", type=int, default=200, help="Training epochs.")
     parser.add_argument("--imgsz", type=int, default=640, help="Training image size.")
     parser.add_argument("--batch", type=int, default=8, help="Batch size.")
     parser.add_argument("--device", default="0", help="Training device, for example 0, 0,1, or cpu.")
