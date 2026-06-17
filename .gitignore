@@ -33,6 +33,10 @@ wandb/
 *.hbm
 *.rgbchw
 
+!weights/
+!weights/**/*.pt
+!weights/**/*.md
+
 !experiments/
 !experiments/**/
 !experiments/**/*.pt

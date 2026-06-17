@@ -165,6 +165,10 @@ W&B logging is enabled by default. Provide `WANDB_API_KEY`, pass `--wandb-api-ke
 
 Ultralytics outputs follow the standard layout under `runs/seg/<name>/`.
 
+Pretrained TinySeg checkpoints for continued training are kept under
+`weights/`; see `weights/README.md` for the infra1 and infra34 villa-trained
+0614 checkpoints and their hashes.
+
 ## Export ONNX
 
 ```bash
