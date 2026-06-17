@@ -18,7 +18,7 @@ def build_parser():
     parser.add_argument("--model", default="yolo11n-seg.pt", help="Base model or checkpoint path.")
     parser.add_argument("--epochs", type=int, default=200, help="Training epochs.")
     parser.add_argument("--imgsz", type=int, default=640, help="Training image size.")
-    parser.add_argument("--batch", type=int, default=8, help="Batch size.")
+    parser.add_argument("--batch", type=int, default=64, help="Batch size.")
     parser.add_argument("--device", default="0", help="Training device, for example 0, 0,1, or cpu.")
     parser.add_argument("--workers", type=int, default=8, help="Dataloader workers.")
     parser.add_argument("--patience", type=int, default=30, help="Early stopping patience.")
